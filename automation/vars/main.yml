@@ -7,7 +7,7 @@ proxy_env: {} # yamllint disable rule:braces
 # ---------------------------------------------------------------------
 
 # Cluster variables
-cluster_vip: "" # IP address for client access to the databases in the cluster (optional).
+cluster_vip: "10.1.125.55" # IP address for client access to the databases in the cluster (optional).
 vip_interface: "{{ ansible_default_ipv4.interface }}" # interface name (e.g., "ens32").
 # Note: VIP-based solutions such as keepalived or vip-manager may not function correctly in cloud environments.
 
@@ -23,7 +23,7 @@ synchronous_mode_strict: false # if 'true' then block all client writes to the m
 synchronous_node_count: 1 # number of synchronous standby databases
 
 # Load Balancing
-with_haproxy_load_balancing: false # or 'true' if you want to install and configure the load-balancing
+with_haproxy_load_balancing: true # or 'true' if you want to install and configure the load-balancing
 haproxy_listen_port:
   master: 5000
   replicas: 5001
@@ -32,10 +32,10 @@ haproxy_listen_port:
   # The following ('_direct') ports are used for direct connections to the PostgreSQL database,
   # bypassing the PgBouncer connection pool (if 'pgbouncer_install' is 'true').
   # Uncomment the relevant lines if you need to set up direct connections.
-  #  master_direct: 6000
-  #  replicas_direct: 6001
-  #  replicas_sync_direct: 6002
-  #  replicas_async_direct: 6003
+  master_direct: 6000
+  replicas_direct: 6001
+  replicas_sync_direct: 6002
+  replicas_async_direct: 6003
   stats: 7000
 haproxy_maxconn:
   global: 100000
@@ -46,33 +46,33 @@ haproxy_timeout:
   server: "60m"
 # Optionally declare log format for haproxy.
 # Uncomment following lines (and remove extra space in front of variable definition) for JSON structured log format.
-# haproxy_log_format: "{
-#  \"pid\":%pid,\
-#  \"haproxy_frontend_type\":\"tcp\",\
-#  \"haproxy_process_concurrent_connections\":%ac,\
-#  \"haproxy_frontend_concurrent_connections\":%fc,\
-#  \"haproxy_backend_concurrent_connections\":%bc,\
-#  \"haproxy_server_concurrent_connections\":%sc,\
-#  \"haproxy_backend_queue\":%bq,\
-#  \"haproxy_server_queue\":%sq,\
-#  \"haproxy_queue_wait_time\":%Tw,\
-#  \"haproxy_server_wait_time\":%Tc,\
-#  \"response_time\":%Td,\
-#  \"session_duration\":%Tt,\
-#  \"request_termination_state\":\"%tsc\",\
-#  \"haproxy_server_connection_retries\":%rc,\
-#  \"remote_addr\":\"%ci\",\
-#  \"remote_port\":%cp,\
-#  \"frontend_addr\":\"%fi\",\
-#  \"frontend_port\":%fp,\
-#  \"frontend_ssl_version\":\"%sslv\",\
-#  \"frontend_ssl_ciphers\":\"%sslc\",\
-#  \"haproxy_frontend_name\":\"%f\",\
-#  \"haproxy_backend_name\":\"%b\",\
-#  \"haproxy_server_name\":\"%s\",\
-#  \"response_size\":%B,\
-#  \"request_size\":%U\
-#  }"
+haproxy_log_format: "{
+  \"pid\":%pid,\
+  \"haproxy_frontend_type\":\"tcp\",\
+  \"haproxy_process_concurrent_connections\":%ac,\
+  \"haproxy_frontend_concurrent_connections\":%fc,\
+  \"haproxy_backend_concurrent_connections\":%bc,\
+  \"haproxy_server_concurrent_connections\":%sc,\
+  \"haproxy_backend_queue\":%bq,\
+  \"haproxy_server_queue\":%sq,\
+  \"haproxy_queue_wait_time\":%Tw,\
+  \"haproxy_server_wait_time\":%Tc,\
+  \"response_time\":%Td,\
+  \"session_duration\":%Tt,\
+  \"request_termination_state\":\"%tsc\",\
+  \"haproxy_server_connection_retries\":%rc,\
+  \"remote_addr\":\"%ci\",\
+  \"remote_port\":%cp,\
+  \"frontend_addr\":\"%fi\",\
+  \"frontend_port\":%fp,\
+  \"frontend_ssl_version\":\"%sslv\",\
+  \"frontend_ssl_ciphers\":\"%sslc\",\
+  \"haproxy_frontend_name\":\"%f\",\
+  \"haproxy_backend_name\":\"%b\",\
+  \"haproxy_server_name\":\"%s\",\
+  \"response_size\":%B,\
+  \"request_size\":%U\
+  }"
 
 # keepalived (if 'cluster_vip' is specified and 'with_haproxy_load_balancing' is 'true')
 keepalived_virtual_router_id: "{{ cluster_vip.split('.')[3] | int }}" # The last octet of 'cluster_vip' IP address is used by default.
@@ -102,7 +102,7 @@ dcs_exists: false # or 'true' if you do not want Autobase to deploy and manage e
 
 # if dcs_type: "etcd" and dcs_exists: false
 etcd_version: "3.5.20" # version for deploy etcd cluster
-etcd_data_dir: "/var/lib/etcd"
+etcd_data_dir: "/data/etcd"
 etcd_cluster_name: "etcd-{{ patroni_cluster_name }}" # ETCD_INITIAL_CLUSTER_TOKEN
 etcd_on_dedicated_nodes: "{{ groups['etcd_cluster'] | difference(groups['postgres_cluster']) | length > 0 }}" # 'true' or 'false'
 # TLS
@@ -212,6 +212,12 @@ postgresql_password_encryption_algorithm: "scram-sha-256" # or "md5" if your cli
 # (optional) list of users to be created (if not already exists)
 postgresql_users:
   - { name: "{{ pgbouncer_auth_username }}", password: "{{ pgbouncer_auth_password }}", flags: "LOGIN", role: "" }
+  - { name: "{{ vault.users.superadmin.username }}", password: "{{ vault.users.superadmin.password }}", flags: "SUPERUSER" }
+  - { name: "{{ vault.users.confluence.username }}", password: "{{ vault.users.confluence.password }}", flags: "NOSUPERUSER" }
+  - { name: "{{ vault.users.jira.username }}", password: "{{ vault.users.jira.password }}", flags: "NOSUPERUSER" }
+  - { name: "{{ vault.users.nocodb.username }}", password: "{{ vault.users.nocodb.password }}", flags: "NOSUPERUSER" }
+  - { name: "{{ vault.users.flowise.username }}", password: "{{ vault.users.flowise.password }}", flags: "NOSUPERUSER" }
+  - { name: "{{ vault.users.vector.username }}", password: "{{ vault.users.vector.password }}", flags: "NOSUPERUSER" }
 #  - { name: "monitoring_auth_username", password: "monitoring_user_password", flags: "LOGIN", role: "pg_monitor" } # monitoring Service Account
 #  - { name: "mydb-user", password: "mydb-user-pass", flags: "SUPERUSER" }
 #  - { name: "", password: "", flags: "NOSUPERUSER" }
@@ -219,7 +225,12 @@ postgresql_users:
 #  - { name: "", password: "", flags: "NOLOGIN" }
 
 # (optional) list of databases to be created (if not already exists)
-postgresql_databases: []
+postgresql_databases:
+  - { db: "{{ vault.users.wiki.dbname }}", encoding: "UTF8", lc_collate: "ru_RU.UTF-8", lc_ctype: "ru_RU.UTF-8", owner: "{{ vault.users.wiki.username }}" }
+  - { db: "{{ vault.users.agile.dbname }}", encoding: "UTF8", lc_collate: "ru_RU.UTF-8", lc_ctype: "ru_RU.UTF-8", owner: "{{ vault.users.agile.username }}" }
+  - { db: "{{ vault.users.flowise.dbname }}", encoding: "UTF8", lc_collate: "en_US.UTF-8", lc_ctype: "en_US.UTF-8", owner: "{{ vault.users.flowise.username }}" }
+  - { db: "{{ vault.users.vector.dbname }}", encoding: "UTF8", lc_collate: "en_US.UTF-8", lc_ctype: "en_US.UTF-8", owner: "{{ vault.users.vector.username }}" }
+  - { db: "{{ vault.users.nocodb.dbname }}", encoding: "UTF8", lc_collate: "en_US.UTF-8", lc_ctype: "en_US.UTF-8", owner: "{{ vault.users.nocodb.username }}" }
 #  - { db: "mydatabase", encoding: "UTF8", lc_collate: "ru_RU.UTF-8", lc_ctype: "ru_RU.UTF-8", owner: "mydb-user" }
 #  - { db: "mydatabase2", encoding: "UTF8", lc_collate: "ru_RU.UTF-8", lc_ctype: "ru_RU.UTF-8", owner: "mydb-user", conn_limit: "50" }
 #  - { db: "", encoding: "UTF8", lc_collate: "en_US.UTF-8", lc_ctype: "en_US.UTF-8", owner: "" }
@@ -254,7 +265,7 @@ postgresql_extensions: []
 
 # postgresql parameters to bootstrap dcs (are parameters for example)
 postgresql_parameters:
-  - { option: "max_connections", value: "1000" }
+  - { option: "max_connections", value: "500" }
   - { option: "superuser_reserved_connections", value: "5" }
   - { option: "password_encryption", value: "{{ postgresql_password_encryption_algorithm }}" }
   - { option: "ssl", value: "{{ 'on' if tls_cert_generate | bool else 'off' }}" }

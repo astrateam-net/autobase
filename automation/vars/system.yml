@@ -10,11 +10,13 @@ etc_hosts: []
 #  - ""
 
 ntp_enabled: false # or 'true' if you want to install and configure the ntp service
-ntp_servers: []
+ntp_servers:
+  - "ntp0.ntp-servers.net"
+  - "ntp1.ntp-servers.net"
 #  - "10.128.64.44"
 #  - "10.128.64.45"
 
-timezone: ""
+timezone: "Europe/Moscow"
 # timezone: "Etc/UTC"
 # timezone: "America/New_York"
 # timezone: "Europe/Moscow"
@@ -24,7 +26,7 @@ timezone: ""
 # (except RHEL>=8,use glibc-langpack)
 locale_gen:
   - { language_country: "en_US", encoding: "UTF-8" }
-#  - { language_country: "ru_RU", encoding: "UTF-8" }
+  - { language_country: "ru_RU", encoding: "UTF-8" }
 #  - { language_country: "de_DE", encoding: "UTF-8" }
 #  - { language_country: "", encoding: "" }
 
@@ -59,7 +61,7 @@ sysctl_conf:
     - { name: "net.ipv4.ip_nonlocal_bind", value: "1" }
     - { name: "net.ipv4.ip_forward", value: "1" }
     - { name: "net.ipv4.ip_local_port_range", value: "10000 65535" }
-    - { name: "net.core.netdev_max_backlog", value: "10000" }
+    # - { name: "net.core.netdev_max_backlog", value: "10000" }
     - { name: "net.ipv4.tcp_max_syn_backlog", value: "8192" }
     - { name: "net.core.somaxconn", value: "65535" }
     - { name: "net.ipv4.tcp_tw_reuse", value: "1" }
@@ -70,7 +72,7 @@ sysctl_conf:
     - { name: "net.ipv4.ip_nonlocal_bind", value: "1" }
     - { name: "net.ipv4.ip_forward", value: "1" }
     - { name: "net.ipv4.ip_local_port_range", value: "10000 65535" }
-    - { name: "net.core.netdev_max_backlog", value: "10000" }
+    # - { name: "net.core.netdev_max_backlog", value: "10000" }
     - { name: "net.ipv4.tcp_max_syn_backlog", value: "8192" }
     - { name: "net.core.somaxconn", value: "65535" }
     - { name: "net.ipv4.tcp_tw_reuse", value: "1" }
@@ -184,7 +186,8 @@ fetch_files_from_master: []
 #  - { src: "/path/to/myfile", dest: "files/myfile" }
 
 # (optional) - Copy this files to all servers in the cluster ("master" and "replica" groups)
-copy_files_to_all_server: []
+copy_files_to_all_server:
+  - { src: "files/ca-certificates.crt", dest: "/usr/local/share/ca-certificates/ca-certificates.crt", owner: "root", group: "root", mode: "0644" }
 #  - { src: "files/ssl-cert-snakeoil.pem", dest: "/etc/ssl/certs/ssl-cert-snakeoil.pem", owner: "postgres", group: "postgres", mode: "0644" }
 #  - { src: "files/ssl-cert-snakeoil.key", dest: "/etc/ssl/private/ssl-cert-snakeoil.key", owner: "postgres", group: "postgres", mode: "0600" }
 #  - { src: "files/myfile", dest: "/path/to/myfile", owner: "postgres", group: "postgres", mode: "0640" }
@@ -225,7 +228,7 @@ mount:
 
 # (optional) Execute custom commands or scripts
 # This can be a direct command, a bash script content, or a path to a script on the host
-pre_deploy_command: "" # Command or script to be executed before the Postgres cluster deployment
+pre_deploy_command: "apt-get install -y ca-certificates" # Command or script to be executed before the Postgres cluster deployment
 pre_deploy_command_timeout: 3600 # Timeout in seconds
 pre_deploy_command_hosts: "postgres_cluster" # host groups where the pre_deploy_command should be executed
 pre_deploy_command_print: true # Print the command in the ansible log

@@ -7,6 +7,11 @@
     - name: Include main variables
       ansible.builtin.include_vars: "vars/main.yml"
       tags: always
+
+    - name: Include vault variables
+      ansible.builtin.include_vars: "vars/vault.yml"
+      tags: always
+
     # set_fact: 'pgbackrest_install' to configure Postgres backups (TODO: Add the ability to configure backups in the UI)
     # Note: Applicable only for "aws", "gcp", "azure", because:
     # "digitalocean" - requires the Spaces access keys ("AWS_ACCESS_KEY_ID" and "AWS_SECRET_ACCESS_KEY" variables)
@@ -35,6 +40,10 @@
   pre_tasks:
     - name: Include main variables
       ansible.builtin.include_vars: "vars/main.yml"
+      tags: always
+
+    - name: Include vault variables
+      ansible.builtin.include_vars: "vars/vault.yml"
       tags: always
 
     - name: Include system variables
@@ -232,6 +241,10 @@
       ansible.builtin.include_vars: "vars/main.yml"
       tags: always
 
+    - name: Include vault variables
+      ansible.builtin.include_vars: "vars/vault.yml"
+      tags: always
+
     - name: Include system variables
       ansible.builtin.include_vars: "vars/system.yml"
       tags: always
@@ -302,6 +315,10 @@
       ansible.builtin.include_vars: "vars/main.yml"
       tags: always
 
+    - name: Include vault variables
+      ansible.builtin.include_vars: "vars/vault.yml"
+      tags: always
+
     - name: Include OS-specific variables
       ansible.builtin.include_vars: "vars/{{ ansible_os_family }}.yml"
       tags: always
@@ -332,6 +349,10 @@
   pre_tasks:
     - name: Include main variables
       ansible.builtin.include_vars: "vars/main.yml"
+      tags: always
+
+    - name: Include vault variables
+      ansible.builtin.include_vars: "vars/vault.yml"
       tags: always
 
     - name: Include system variables

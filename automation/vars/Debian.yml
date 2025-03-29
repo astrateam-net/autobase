@@ -8,7 +8,7 @@ postgresql_data_dir: "\
   {% if cloud_provider | default('') | length > 0 %}\
   {{ pg_data_mount_path | default('/pgdata') }}/{{ postgresql_version }}/{{ postgresql_cluster_name }}\
   {% else %}\
-  /var/lib/postgresql/{{ postgresql_version }}/{{ postgresql_cluster_name }}\
+  /pgdata/{{ postgresql_version }}/{{ postgresql_cluster_name }}\
   {% endif %}"
 # Note: When deploying to cloud providers, we create a disk and mount the data directory,
 # along the path defined in the "pg_data_mount_path" variable (or use "/pgdata" by default).
@@ -69,7 +69,7 @@ postgresql_packages:
 #  - postgresql-{{ postgresql_version }}-pg-wait-sampling
 #  - postgresql-{{ postgresql_version }}-postgis-3
 #  - postgresql-{{ postgresql_version }}-pgrouting
-#  - postgresql-{{ postgresql_version }}-pgvector
+  - postgresql-{{ postgresql_version }}-pgvector
 #  - postgresql-{{ postgresql_version }}-pgaudit
 #  - postgresql-{{ postgresql_version }}-partman
 

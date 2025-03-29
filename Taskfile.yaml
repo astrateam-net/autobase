@@ -1,0 +1,32 @@
+# yaml-language-server: $schema=https://taskfile.dev/schema.json
+version: '3'
+
+vars:
+  ROOT_DIR: './automation'  # Define the root directory
+
+tasks:
+
+  default:
+    desc: Show available tasks
+    cmds:
+      - task --list
+
+  config:
+    desc: Run the PostgreSQL cluster configuration playbook
+    cmds:
+      - ansible-playbook automation/config_pgcluster.yml
+
+  show_vault:
+    desc: Show vault content
+    cmds:
+      - ansible-vault show automation/vars/vault.yml
+
+  encrypt:
+    desc: Show vault content
+    cmds:
+      - ansible-vault encrypt automation/vars/vault.yml
+
+  decrypt:
+    desc: Show vault content
+    cmds:
+      - ansible-vault decrypt automation/vars/vault.yml
