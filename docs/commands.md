@@ -20,3 +20,8 @@ In your case, you should have executed the deploy_pgcluster.yml playbook with th
 ```
 ansible-playbook deploy_pgcluster.yml -e "postgresql_exists=true" -t pgbackrest
 ```
+
+
+```
+ansible-playbook deploy_pgcluster.yml -e "enable_pgvector=true"
+```

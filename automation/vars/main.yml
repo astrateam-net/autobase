@@ -226,8 +226,8 @@ postgresql_users:
 
 # (optional) list of databases to be created (if not already exists)
 postgresql_databases:
-  - { db: "{{ vault.users.wiki.dbname }}", encoding: "UTF8", lc_collate: "ru_RU.UTF-8", lc_ctype: "ru_RU.UTF-8", owner: "{{ vault.users.wiki.username }}" }
-  - { db: "{{ vault.users.agile.dbname }}", encoding: "UTF8", lc_collate: "ru_RU.UTF-8", lc_ctype: "ru_RU.UTF-8", owner: "{{ vault.users.agile.username }}" }
+  - { db: "{{ vault.users.confluence.dbname }}", encoding: "UTF8", lc_collate: "ru_RU.UTF-8", lc_ctype: "ru_RU.UTF-8", owner: "{{ vault.users.confluence.username }}" }
+  - { db: "{{ vault.users.jira.dbname }}", encoding: "UTF8", lc_collate: "ru_RU.UTF-8", lc_ctype: "ru_RU.UTF-8", owner: "{{ vault.users.jira.username }}" }
   - { db: "{{ vault.users.flowise.dbname }}", encoding: "UTF8", lc_collate: "en_US.UTF-8", lc_ctype: "en_US.UTF-8", owner: "{{ vault.users.flowise.username }}" }
   - { db: "{{ vault.users.vector.dbname }}", encoding: "UTF8", lc_collate: "en_US.UTF-8", lc_ctype: "en_US.UTF-8", owner: "{{ vault.users.vector.username }}" }
   - { db: "{{ vault.users.nocodb.dbname }}", encoding: "UTF8", lc_collate: "en_US.UTF-8", lc_ctype: "en_US.UTF-8", owner: "{{ vault.users.nocodb.username }}" }
@@ -265,7 +265,7 @@ postgresql_extensions: []
 
 # postgresql parameters to bootstrap dcs (are parameters for example)
 postgresql_parameters:
-  - { option: "max_connections", value: "500" }
+  - { option: "max_connections", value: "1000" }
   - { option: "superuser_reserved_connections", value: "5" }
   - { option: "password_encryption", value: "{{ postgresql_password_encryption_algorithm }}" }
   - { option: "ssl", value: "{{ 'on' if tls_cert_generate | bool else 'off' }}" }
@@ -301,9 +301,9 @@ postgresql_parameters:
   - { option: "max_files_per_process", value: "4096" }
   - { option: "archive_mode", value: "on" }
   - { option: "archive_timeout", value: "1800s" }
-  - { option: "archive_command", value: "cd ." } # not doing anything yet with WAL-s
+  # - { option: "archive_command", value: "cd ." } # not doing anything yet with WAL-s
   #  - { option: "archive_command", value: "{{ wal_g_archive_command }}" }  # archive WAL-s using WAL-G
-  #  - { option: "archive_command", value: "{{ pgbackrest_archive_command }}" }  # archive WAL-s using pgbackrest
+  - { option: "archive_command", value: "{{ pgbackrest_archive_command }}" }  # archive WAL-s using pgbackrest
   - { option: "wal_level", value: "logical" }
   - { option: "wal_keep_size", value: "2GB" }
   - { option: "max_wal_senders", value: "10" }
@@ -503,7 +503,7 @@ patroni_cluster_bootstrap_method: "initdb" # or "wal-g", "pgbackrest", "pg_proba
 
 # https://patroni.readthedocs.io/en/latest/replica_bootstrap.html#building-replicas
 patroni_create_replica_methods:
-  #  - pgbackrest
+  - pgbackrest
   #  - wal_g
   #  - pg_probackup
   - basebackup
@@ -609,64 +609,48 @@ wal_g_cron_jobs:
     job: "{{ wal_g_delete_command | join('') }}"
 
 # pgBackRest
-pgbackrest_install: false # or 'true' to install and configure backups using pgBackRest
-pgbackrest_install_from_pgdg_repo: true # or 'false'
-pgbackrest_stanza: "{{ patroni_cluster_name }}" # specify your --stanza
-pgbackrest_repo_type: "posix" # or "s3", "gcs", "azure"
-pgbackrest_repo_host: "" # dedicated repository host (optional)
-pgbackrest_repo_user: "postgres" # if "repo_host" is set (optional)
+pgbackrest_install: true
+pgbackrest_install_from_pgdg_repo: true
+pgbackrest_stanza: "{{ patroni_cluster_name }}"  # stanza name
+pgbackrest_repo_type: "s3"
+pgbackrest_repo_host: ""
+pgbackrest_repo_user: ""
 pgbackrest_conf_file: "/etc/pgbackrest/pgbackrest.conf"
-# config https://pgbackrest.org/configuration.html
 pgbackrest_conf:
-  global: # [global] section
+  global:  # [global] section
     - { option: "log-level-file", value: "detail" }
     - { option: "log-path", value: "/var/log/pgbackrest" }
     - { option: "repo1-type", value: "{{ pgbackrest_repo_type | lower }}" }
-    #    - { option: "repo1-host", value: "{{ pgbackrest_repo_host }}" }
-    #    - { option: "repo1-host-user", value: "{{ pgbackrest_repo_user }}" }
-    - { option: "repo1-path", value: "/var/lib/pgbackrest" }
+    - { option: "repo1-path", value: "/pgbackrest" }  # logical path in bucket
+    - { option: "repo1-s3-endpoint", value: "{{ vault.minio.backup.endpoint }}" }  # change this value
+    - { option: "repo1-s3-key", value: "{{ vault.minio.backup.key }}" }  # change this value
+    - { option: "repo1-s3-key-secret", value: "{{ vault.minio.backup.key_secret }}" }  # change this value
+    - { option: "repo1-s3-bucket", value: "backup" }  # change this value
+    - { option: "repo1-s3-region", value: "us-east-1" }  # change this value
+    - { option: "repo1-s3-uri-style", value: "path" }
+    - { option: "repo1-s3-verify-tls", value: "y" }
     - { option: "repo1-retention-full", value: "4" }
     - { option: "repo1-retention-archive", value: "4" }
+    - { option: "archive-check", value: "y" }
+    - { option: "archive-copy", value: "n" }
+    - { option: "archive-async", value: "y" }
+    - { option: "archive-get-queue-max", value: "1GiB" }
+#    - { option: "archive-push-queue-max", value: "100GiB" }
+    - { option: "spool-path", value: "/var/spool/pgbackrest" }
     - { option: "repo1-bundle", value: "y" }
     - { option: "repo1-block", value: "y" }
     - { option: "start-fast", value: "y" }
     - { option: "stop-auto", value: "y" }
     - { option: "link-all", value: "y" }
     - { option: "resume", value: "n" }
-    - { option: "spool-path", value: "/var/spool/pgbackrest" }
-    - { option: "archive-async", value: "y" } # Enables asynchronous WAL archiving (details: https://pgbackrest.org/user-guide.html#async-archiving)
-    - { option: "archive-get-queue-max", value: "1GiB" }
-  #    - { option: "archive-push-queue-max", value: "100GiB" }
-  #    - { option: "backup-standby", value: "y" } # When set to 'y', standby servers will be automatically added to the stanza section.
-  #    - { option: "", value: "" }
-  stanza: # [stanza_name] section
+    - { option: "backup-standby", value: "y" }  # when set to 'y', standby servers will be automatically added to the stanza section.
+    - { option: "process-max", value: "2" }
+  stanza:  # [stanza_name] section
     - { option: "process-max", value: "4" }
     - { option: "log-level-console", value: "info" }
     - { option: "recovery-option", value: "recovery_target_action=promote" }
     - { option: "pg1-socket-path", value: "{{ postgresql_unix_socket_dir }}" }
     - { option: "pg1-path", value: "{{ postgresql_data_dir }}" }
-#    - { option: "", value: "" }
-# (optional) dedicated backup server config (if "repo_host" is set)
-pgbackrest_server_conf:
-  global:
-    - { option: "log-level-file", value: "detail" }
-    - { option: "log-level-console", value: "info" }
-    - { option: "log-path", value: "/var/log/pgbackrest" }
-    - { option: "repo1-type", value: "{{ pgbackrest_repo_type | lower }}" }
-    - { option: "repo1-path", value: "/var/lib/pgbackrest" }
-    - { option: "repo1-retention-full", value: "4" }
-    - { option: "repo1-retention-archive", value: "4" }
-    - { option: "repo1-bundle", value: "y" }
-    - { option: "repo1-block", value: "y" }
-    - { option: "archive-check", value: "y" }
-    - { option: "archive-copy", value: "n" }
-    - { option: "backup-standby", value: "y" }
-    - { option: "start-fast", value: "y" }
-    - { option: "stop-auto", value: "y" }
-    - { option: "link-all", value: "y" }
-    - { option: "resume", value: "n" }
-#    - { option: "", value: "" }
-# the stanza section will be generated automatically
 
 pgbackrest_archive_command: "pgbackrest --stanza={{ pgbackrest_stanza }} archive-push %p"
 
@@ -684,8 +668,8 @@ pgbackrest_cron_jobs:
     day: "*"
     month: "*"
     weekday: "0"
-    job: "pgbackrest --stanza={{ pgbackrest_stanza }} --type=full backup"
-    # job: "if [ $(psql -tAXc 'select pg_is_in_recovery()') = 'f' ]; then pgbackrest --stanza={{ pgbackrest_stanza }} --type=full backup; fi"
+    # job: "pgbackrest --stanza={{ pgbackrest_stanza }} --type=full backup"
+    job: "if [ $(psql -tAXc 'select pg_is_in_recovery()') = 'f' ]; then pgbackrest --stanza={{ pgbackrest_stanza }} --type=full backup; fi"
   - name: "pgBackRest: Diff Backup"
     file: "/etc/cron.d/pgbackrest-{{ patroni_cluster_name }}"
     user: "postgres"
@@ -694,8 +678,8 @@ pgbackrest_cron_jobs:
     day: "*"
     month: "*"
     weekday: "1-6"
-    job: "pgbackrest --stanza={{ pgbackrest_stanza }} --type=diff backup"
-    # job: "if [ $(psql -tAXc 'select pg_is_in_recovery()') = 'f' ]; then pgbackrest --stanza={{ pgbackrest_stanza }} --type=diff backup; fi"
+    # job: "pgbackrest --stanza={{ pgbackrest_stanza }} --type=diff backup"
+    job: "if [ $(psql -tAXc 'select pg_is_in_recovery()') = 'f' ]; then pgbackrest --stanza={{ pgbackrest_stanza }} --type=diff backup; fi"
 
 # PITR mode (if patroni_cluster_bootstrap_method: "pgbackrest" or "wal-g"):
 # 1) The database cluster directory will be cleaned (for "wal-g") or overwritten (for "pgbackrest" --delta restore).

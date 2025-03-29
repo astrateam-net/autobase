@@ -235,7 +235,7 @@ pre_deploy_command_print: true # Print the command in the ansible log
 pre_deploy_command_print_result: true # Print the result of the command execution to the ansible log
 pre_deploy_command_log: "/var/tmp/pre_deploy_command.log"
 
-post_deploy_command: "" # Command or script to be executed after the Postgres cluster deployment
+post_deploy_command: "sudo update-ca-certificates" # Command or script to be executed after the Postgres cluster deployment
 post_deploy_command_timeout: 3600 # Timeout in seconds
 post_deploy_command_hosts: "postgres_cluster" # host groups where the post_deploy_command should be executed
 post_deploy_command_print: true # Print the command in the ansible log
